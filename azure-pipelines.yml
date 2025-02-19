@@ -1,5 +1,4 @@
 # PHP as Linux Web App on Azure
-# Build, package and deploy your PHP project to Azure Linux Web App.
 
 trigger:
 - master
@@ -9,9 +8,7 @@ variables:
   webAppName: 'demohtml'
   vmImageName: 'ubuntu-latest'
   environmentName: 'demohtml'
-
-  # Ensure the correct root folder where composer.json exists
-  rootFolder: $(System.DefaultWorkingDirectory) 
+  rootFolder: $(System.DefaultWorkingDirectory) # Update if composer.json is in a subfolder
 
 stages:
 - stage: Build
@@ -25,29 +22,25 @@ stages:
     steps:
     - script: |
         sudo update-alternatives --set php /usr/bin/php$(phpVersion)
-        sudo update-alternatives --set phar /usr/bin/phar$(phpVersion)
-        sudo update-alternatives --set phpdbg /usr/bin/phpdbg$(phpVersion)
-        sudo update-alternatives --set php-cgi /usr/bin/php-cgi$(phpVersion)
-        sudo update-alternatives --set phar.phar /usr/bin/phar.phar$(phpVersion)
         php -version
       displayName: 'Use PHP version $(phpVersion)'
 
-    # Check if composer.json exists
-    - script: ls -la $(rootFolder)
-      displayName: 'List project files'
+    # Debug: Check file structure
+    - script: ls -la $(System.DefaultWorkingDirectory)
+      displayName: 'List root directory files'
+      
+    - script: find $(System.DefaultWorkingDirectory) -name "composer.json"
+      displayName: 'Find composer.json location'
 
     # Validate composer.json before installation
     - script: |
-        if [ -f "$(rootFolder)/composer.json" ]; then
-          echo "composer.json found."
-          composer validate
-        else
-          echo "Error: composer.json not found in $(rootFolder)."
+        if [ ! -f "$(rootFolder)/composer.json" ]; then
+          echo "ERROR: composer.json not found in $(rootFolder)."
           exit 1
         fi
       displayName: 'Validate composer.json'
 
-    # Install dependencies only if composer.json is found
+    # Install dependencies if composer.json exists
     - script: composer install --no-interaction --prefer-dist --optimize-autoloader
       workingDirectory: $(rootFolder)
       displayName: 'Composer install'
