@@ -23,6 +23,12 @@ stages:
         php -version
       displayName: 'Use PHP version $(phpVersion)'
 
+    # Debug: List all files to find composer.json
+    - script: ls -R $(System.DefaultWorkingDirectory)
+      displayName: '🔍 Debug: List all files in the repository'
+
+    - script: find $(System.DefaultWorkingDirectory) -name "composer.json"
+      displayName: '🔍 Debug: Find composer.json location'
 
     
     
@@ -59,3 +65,12 @@ stages:
               appName: $(webAppName)
               appType: webAppLinux
               package: $(Pipeline.Workspace)/drop/$(Build.BuildId).zip
+- task: AzureRmWebAppDeployment@5
+  inputs:
+    ConnectionType: 'AzureRM'
+    azureSubscription: 'Pay-As-You-Go (cae0c97a-074f-470f-921a-e09250a693a5)'
+    appType: 'webAppLinux'
+    WebAppName: 'demohtml'
+    packageForLinux: '$(System.DefaultWorkingDirectory)/**/*.zip'
+    RuntimeStack: 'PHP:8.2'
+    DeploymentTypeLinux: 'oneDeploy'
