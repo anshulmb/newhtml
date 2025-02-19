@@ -30,16 +30,7 @@ stages:
     - script: find $(System.DefaultWorkingDirectory) -name "composer.json"
       displayName: '🔍 Debug: Find composer.json location'
 
-    # Validate composer.json
-    - script: |
-        if [ ! -f "$(rootFolder)/composer.json" ]; then
-          echo "❌ ERROR: composer.json not found in $(rootFolder)."
-          exit 1
-        else
-          echo "✅ composer.json found!"
-        fi
-      displayName: 'Validate composer.json'
-
+    
     # Install dependencies
     - script: composer install --no-interaction --prefer-dist --optimize-autoloader
       workingDirectory: $(rootFolder)
