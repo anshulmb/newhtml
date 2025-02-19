@@ -1,30 +1,28 @@
-# PHP as Linux Web App on Azure
-# Build, package and deploy your PHP project to Azure Linux Web App.
-# Add steps that run tests and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/php
+# Azure DevOps Pipeline for PHP on Linux Web App
+# This pipeline builds, packages, and deploys a PHP application to Azure App Service
 
 trigger:
 - master
 
 variables:
-  # Azure Resource Manager connection created during pipeline creation
+  # Azure Subscription for deployment
   azureSubscription: 'a71cd520-4c77-4b70-a643-9a7482685cf2'
 
-  # Web app name
+  # Web App Name
   webAppName: 'demohtml'
 
-  # Agent VM image name
+  # Agent VM Image
   vmImageName: 'ubuntu-latest'
 
-  # Environment name
+  # Environment Name
   environmentName: 'demohtml'
 
-  # Root folder under which your composer.json file is available.
+  # Root Folder where composer.json is located
   rootFolder: $(System.DefaultWorkingDirectory)
 
 stages:
 - stage: Build
-  displayName: Build stage
+  displayName: 'Build Stage'
   variables:
     phpVersion: '8.2'
   jobs:
@@ -32,6 +30,9 @@ stages:
     pool:
       vmImage: $(vmImageName)
     steps:
+    - checkout: self
+      displayName: 'Checkout Source Code'
+
     - script: |
         sudo update-alternatives --set php /usr/bin/php$(phpVersion)
         sudo update-alternatives --set phar /usr/bin/phar$(phpVersion)
@@ -39,15 +40,27 @@ stages:
         sudo update-alternatives --set php-cgi /usr/bin/php-cgi$(phpVersion)
         sudo update-alternatives --set phar.phar /usr/bin/phar.phar$(phpVersion)
         php -version
-      workingDirectory: $(rootFolder)
-      displayName: 'Use PHP version $(phpVersion)'
+      displayName: 'Set PHP Version'
+
+    - script: ls -la $(rootFolder)
+      displayName: 'Verify Files in Root Folder'
+
+    - script: |
+        if [ ! -f "$(rootFolder)/composer.json" ]; then
+          echo "Error: composer.json not found in $(rootFolder)."
+          exit 1
+        fi
+      displayName: 'Ensure composer.json Exists'
+
+    - script: composer clear-cache
+      displayName: 'Clear Composer Cache'
 
     - script: composer install --no-interaction --prefer-dist --optimize-autoloader
       workingDirectory: $(rootFolder)
-      displayName: 'Composer install'
+      displayName: 'Run Composer Install'
 
     - task: ArchiveFiles@2
-      displayName: 'Archive files'
+      displayName: 'Archive Files'
       inputs:
         rootFolderOrFile: '$(rootFolder)'
         includeRootFolder: false
@@ -56,7 +69,7 @@ stages:
         replaceExistingArchive: true
 
     - upload: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
-      displayName: 'Upload package'
+      displayName: 'Upload Package'
       artifact: drop
 
 - stage: Deploy
@@ -73,7 +86,7 @@ stages:
         deploy:
           steps:
           - task: AzureWebApp@1
-            displayName: 'Deploy Azure Web App : demohtml'
+            displayName: 'Deploy to Azure Web App: $(webAppName)'
             inputs:
               azureSubscription: $(azureSubscription)
               appName: $(webAppName)
