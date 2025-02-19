@@ -23,24 +23,6 @@ stages:
         php -version
       displayName: 'Use PHP version $(phpVersion)'
 
-    # Debug: List all files to find composer.json
-    - script: ls -R $(System.DefaultWorkingDirectory)
-      displayName: '🔍 Debug: List all files in the repository'
-
-    - script: find $(System.DefaultWorkingDirectory) -name "composer.json"
-      displayName: '🔍 Debug: Find composer.json location'
-
-    
-    
-    - task: ArchiveFiles@2
-      displayName: 'Archive files'
-      inputs:
-        rootFolderOrFile: '$(rootFolder)'
-        includeRootFolder: false
-        archiveType: zip
-        archiveFile: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
-        replaceExistingArchive: true
-
     - upload: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
       displayName: 'Upload package'
       artifact: drop
