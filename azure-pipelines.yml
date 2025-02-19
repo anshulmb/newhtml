@@ -1,26 +1,17 @@
 # PHP as Linux Web App on Azure
 # Build, package and deploy your PHP project to Azure Linux Web App.
-# Add steps that run tests and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/php
 
 trigger:
 - master
 
 variables:
-  # Azure Resource Manager connection created during pipeline creation
   azureSubscription: '2c879bc0-8bdf-4c05-becf-5ebece9a9536'
-
-  # Web app name
   webAppName: 'demohtml'
-
-  # Agent VM image name
   vmImageName: 'ubuntu-latest'
-
-  # Environment name
   environmentName: 'demohtml'
 
-  # Root folder under which your composer.json file is available.
-  rootFolder: $(System.DefaultWorkingDirectory)
+  # Ensure the correct root folder where composer.json exists
+  rootFolder: $(System.DefaultWorkingDirectory) 
 
 stages:
 - stage: Build
@@ -39,9 +30,24 @@ stages:
         sudo update-alternatives --set php-cgi /usr/bin/php-cgi$(phpVersion)
         sudo update-alternatives --set phar.phar /usr/bin/phar.phar$(phpVersion)
         php -version
-      workingDirectory: $(rootFolder)
       displayName: 'Use PHP version $(phpVersion)'
 
+    # Check if composer.json exists
+    - script: ls -la $(rootFolder)
+      displayName: 'List project files'
+
+    # Validate composer.json before installation
+    - script: |
+        if [ -f "$(rootFolder)/composer.json" ]; then
+          echo "composer.json found."
+          composer validate
+        else
+          echo "Error: composer.json not found in $(rootFolder)."
+          exit 1
+        fi
+      displayName: 'Validate composer.json'
+
+    # Install dependencies only if composer.json is found
     - script: composer install --no-interaction --prefer-dist --optimize-autoloader
       workingDirectory: $(rootFolder)
       displayName: 'Composer install'
