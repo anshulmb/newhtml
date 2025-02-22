@@ -1,0 +1,58 @@
+trigger:
+- master
+
+variables:
+  azureSubscription: '2c879bc0-8bdf-4c05-becf-5ebece9a9536'
+  webAppName: 'demohtml'
+  vmImageName: 'ubuntu-latest'
+  environmentName: 'demohtml'
+  rootFolder: $(System.DefaultWorkingDirectory) # Adjust this if composer.json is in a subfolder
+
+stages:
+- stage: Build
+  displayName: Build stage
+  variables:
+    phpVersion: '8.2'
+  jobs:
+  - job: BuildJob
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - script: |
+        sudo update-alternatives --set php /usr/bin/php$(phpVersion)
+        php -version
+      displayName: 'Use PHP version $(phpVersion)'
+
+    - upload: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
+      displayName: 'Upload package'
+      artifact: drop
+
+- stage: Deploy
+  displayName: 'Deploy Web App'
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - deployment: DeploymentJob
+    pool:
+      vmImage: $(vmImageName)
+    environment: $(environmentName)
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureWebApp@1
+            displayName: 'Deploy Azure Web App : demohtml'
+            inputs:
+              azureSubscription: $(azureSubscription)
+              appName: $(webAppName)
+              appType: webAppLinux
+              package: $(Pipeline.Workspace)/drop/$(Build.BuildId).zip
+- task: AzureRmWebAppDeployment@5
+  inputs:
+    ConnectionType: 'AzureRM'
+    azureSubscription: 'Pay-As-You-Go (cae0c97a-074f-470f-921a-e09250a693a5)'
+    appType: 'webAppLinux'
+    WebAppName: 'demohtml'
+    packageForLinux: '$(System.DefaultWorkingDirectory)/**/*.zip'
+    RuntimeStack: 'PHP:8.2'
+    DeploymentTypeLinux: 'oneDeploy'
